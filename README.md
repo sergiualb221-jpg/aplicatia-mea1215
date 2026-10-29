@@ -1,27 +1,19 @@
 # MATA
 
-Site-ul static este pagina `mach-moto-telefon.html`. `index.html` este varianta de pe GitHub Pages. Logo-ul și pagina trebuie să rămână în același director.
+Site-ul static este `mach-moto-telefon.html`; `index.html` din repository-ul GitHub este copia publicată. Configurația browserului este în `supabase-config.js`, integrarea în `auth.js`, iar schema și politicile de securitate sunt în `supabase-schema.sql`.
 
-## Activarea autentificării
+## Conectarea la Supabase
 
-Autentificarea folosește Firebase Authentication; parola nu este salvată de site în `localStorage`.
+1. Creează un proiect Supabase și deschide **Project Settings → API**. Copiază Project URL și cheia publică `anon`/`publishable` în `supabase-config.js`. Nu pune cheia `service_role` sau o cheie `secret` în site.
+2. În **Authentication → Providers**, activează Email. Păstrează confirmarea adreselor activă.
+3. În **Authentication → URL Configuration**, adaugă URL-ul GitHub Pages (și URL-ul local pentru dezvoltare) în Site URL și Redirect URLs.
+4. Rulează tot conținutul din `supabase-schema.sql` o singură dată, în Supabase **SQL Editor**. Scriptul creează tabelele, politicile RLS, bucketul de imagini și publicarea Realtime.
+5. Completează `supabase-config.js`, publică `index.html`, `auth.js`, `supabase-config.js` și `mach-moto-logo.jpeg` pe HTTPS. Pagina deschisă cu `file://` nu poate folosi autentificarea web.
 
-1. Creează un proiect Firebase și înregistrează o aplicație Web.
-2. În Firebase Console, activează metoda **Email/Password** în Authentication → Sign-in method.
-3. Copiază configurația aplicației Web în `firebase-config.js` (`apiKey`, `authDomain`, `projectId`, `appId`). Aceste valori pentru client sunt publice; nu pune niciodată o cheie privată sau un service-account key aici.
-4. În Authentication → Settings → Authorized domains, adaugă domeniul de publicare, de exemplu `sergiualb221-jpg.github.io`.
-5. Publică împreună `index.html`, `auth.js`, `firebase-config.js` și `mach-moto-logo.jpeg` pe un domeniu HTTPS. Logarea nu funcționează din `file://`.
+Site-ul permite înregistrare, confirmarea emailului, logare, resetarea și schimbarea parolei, publicarea anunțurilor cu până la 5 imagini de maximum 5 MB fiecare și conversații live între cumpărător și proprietar. Accesul la rânduri este controlat prin Row Level Security. Imaginile din bucketul `mata-ad-photos` sunt publice pentru afișarea anunțurilor; uploadul și ștergerea sunt limitate la folderul proprietarului.
 
-Formularul oferă conectare, creare de cont cu trimiterea emailului de verificare și resetarea parolei. Configurează o politică de parolă compatibilă cu minimumul de 8 caractere din formular, protecțiile anti-abuz, verificarea emailului și Email Enumeration Protection în Firebase Console înainte de lansare.
-
-## Mesaje și anunțuri comune
-
-Mesajele și anunțurile publicate de utilizatori folosesc Cloud Firestore. În consola Firebase, creează baza de date Firestore, apoi publică regulile din `firestore.rules` și indexurile din `firestore.indexes.json` (cu Firebase CLI din directorul proiectului Firebase). Autentificarea și adresa de email confirmată sunt necesare pentru publicare și mesagerie. În profil, fila **Mesaje** afișează conversațiile; în pagina unui anunț publicat de un utilizator apare butonul **Scrie proprietarului**.
-
-Anunțurile demonstrative vechi și anunțurile create înainte de configurarea Firebase sunt doar locale, nu au proprietar autentificat și nu pot primi mesaje. Fotografiile alese pentru anunț nu sunt încărcate în cloud; această funcție are nevoie de Firebase Storage. Folosește HTTPS și nu publica reguli Firestore cu acces general la scriere.
+Anunțurile demonstrative vechi sunt locale și nu au proprietari autentificați, deci nu pot primi mesaje. Favoritele rămân locale în browser. Configurația Supabase este specifică proiectului și nu poate fi completată fără URL-ul și cheia publică reale.
 
 ## Scalare
 
-Firebase documentează conturi înregistrate nelimitate pentru Firebase Authentication, dar limitează viteza unor operații; volumele mari cer monitorizarea cotelor și creșteri de capacitate. Asta nu înseamnă că site-ul, anunțurile sau baza de date sunt deja dimensionate pentru un miliard de utilizatori.
-
-Anunțurile publicate și mesajele se sincronizează prin Firestore după configurare; favoritele, anunțurile demonstrative și fotografiile de previzualizare rămân locale. Pentru creștere la scară mare sunt necesare monitorizarea cotelor și costurilor, reguli și indexuri testate, stocare separată pentru fotografii, cache și măsurători reale de trafic. Înainte de o promisiune privind miliarde de utilizatori, trebuie stabilite volumele simultane, cererile/secundă, latența, costul și disponibilitatea dorită, apoi validate prin teste de capacitate.
+Supabase oferă Postgres, Auth, Storage și Realtime ca servicii gestionate, dar acest prototip nu a fost dimensionat sau testat pentru miliarde de utilizatori. Stabilește volumele simultane, cererile/secundă, regiunea, latența și bugetul; apoi configurează backupuri, observabilitate, cote și teste de capacitate înainte de trafic mare.
