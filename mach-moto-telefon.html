@@ -113,6 +113,53 @@
     .tinderPlay .swipeCard { height: min(70dvh, 520px); min-height: 360px; }
   }
 </style>
+<style>
+  /* Împiedică elementele decorative și containerele să lărgească documentul. */
+  html, body { width: 100%; max-width: 100%; }
+  html { overflow-x: clip; }
+  body { overflow-x: clip; }
+  .orb { position: fixed; pointer-events: none; }
+  img, video, canvas, svg { max-width: 100%; }
+  .hero > *, .tinderBanner > *, .pageList > *, .detailLayout > *,
+  .tinderFilterGrid > *, .messagesShell > * { min-width: 0; }
+  .listingVisual, .listingVisual img, .detailImage, .detailImage img,
+  .swipeCard, .swipeCard .swipePhoto { max-width: 100%; }
+
+  /* Tabletă: păstrăm grila pe două coloane fără carduri mai late decât ecranul. */
+  @media (min-width: 781px) and (max-width: 1024px) {
+    nav, main { width: calc(100% - 40px); max-width: 100%; }
+    .listings { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .hero { grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); }
+    .scene, .hero > *, section { min-width: 0; max-width: 100%; }
+  }
+
+  /* Telefon: fundalurile decorative rămân în viewport; caruselele își păstrează scroll-ul propriu. */
+  @media (max-width: 780px) {
+    .orb.one { width: min(560px, 84vw); height: min(560px, 84vw); left: 0; top: -22vw; }
+    .orb.two { width: min(650px, 90vw); height: min(650px, 90vw); right: 0; top: 18vw; }
+    nav, main, section, .tinderBanner, .listing, .pageBox,
+    .detailPage, .detailGallery, .detailContent { max-width: 100%; }
+    .hero, .tinderBanner, .detailLayout, .pageList, .tinderFilterGrid,
+    .messagesShell { min-width: 0; }
+    .listings { max-width: calc(100% + 14px); }
+    .sectionHead, .footer, .price, .analytics { min-width: 0; flex-wrap: wrap; }
+    .listing h3, .listingMeta, .detailContent, .messageThread,
+    .conversationItem { min-width: 0; overflow-wrap: anywhere; }
+    .pageHeader { min-width: 0; max-width: 100%; }
+    .sortSelect { max-width: 100%; }
+  }
+  @media (max-width: 480px) {
+    nav, main { max-width: calc(100% - 28px); }
+    .hero h1, .sectionHead h2, .tinderBanner h2, .detailContent h1 { overflow-wrap: anywhere; }
+    .cta, .cta > *, .tinderBanner .darkBtn, .detailActions > * { min-width: 0; max-width: 100%; }
+    .profileTabs { max-width: 100%; }
+  }
+  /* Ecrane desktop: conținutul folosește spațiul disponibil până la lățimea de design. */
+  @media (min-width: 1025px) {
+    nav, main { width: min(1180px, calc(100% - 40px)); max-width: 1180px; }
+    .listings { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+</style>
 </head>
 <body>
 <div class="grid"></div><div class="orb one"></div><div class="orb two"></div>
