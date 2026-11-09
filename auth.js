@@ -147,8 +147,29 @@ async function loadMessages(id, callback, onError, active = () => true) {
   if (active()) callback((data || []).map(mapMessage));
 }
 
+async function requireAdminAccess() {
+  requireVerifiedUser();
+  const { data, error } = await requireClient().rpc('mata_is_admin');
+  if (error) throw error;
+  if (data !== true) {
+    const denied = new Error('Acest cont nu are acces de administrator.');
+    denied.code = 'admin/forbidden';
+    throw denied;
+  }
+}
+
 window.mataAuth = {
   configured: configured && !!supabase,
+  async isAdmin() {
+    if (!currentUser?.emailVerified || !supabase) return false;
+    try {
+      await requireAdminAccess();
+      return true;
+    } catch (error) {
+      if (error?.code !== 'admin/forbidden') console.error('Nu am putut verifica accesul de administrator.', error);
+      return false;
+    }
+  },
   signIn(email, password) {
     return unwrapAuth(requireClient().auth.signInWithPassword({ email, password }));
   },
@@ -193,6 +214,35 @@ window.mataAuth = {
 
 window.mataData = {
   configured: !!supabase,
+  async listAdsAsAdmin() {
+    await requireAdminAccess();
+    const { data, error } = await requireDatabase()
+      .from('ads').select('*').order('created_at', { ascending: false }).limit(500);
+    if (error) throw error;
+    return (data || []).map(mapAd);
+  },
+  async deleteAdAsAdmin(id) {
+    await requireAdminAccess();
+    const client = requireDatabase();
+    const { data: ad, error: readError } = await client.from('ads')
+      .select('photos').eq('id', id).single();
+    if (readError) throw readError;
+    const projectOrigin = new URL(config.url).origin;
+    const publicPrefix = '/storage/v1/object/public/mata-ad-photos/';
+    const paths = (ad.photos || []).flatMap((photo) => {
+      try {
+        const url = new URL(photo);
+        if (url.origin !== projectOrigin || !url.pathname.startsWith(publicPrefix)) return [];
+        return [decodeURIComponent(url.pathname.slice(publicPrefix.length))];
+      } catch { return []; }
+    });
+    if (paths.length) {
+      const { error: storageError } = await client.storage.from('mata-ad-photos').remove(paths);
+      if (storageError) throw storageError;
+    }
+    const { error } = await client.from('ads').delete().eq('id', id);
+    if (error) throw error;
+  },
   watchAds(callback, onError) {
     let active = true;
     const client = requireDatabase();
