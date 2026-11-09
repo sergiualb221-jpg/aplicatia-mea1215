@@ -168,6 +168,64 @@ create policy "Users delete photos from their own folder" on storage.objects
     and (select public.mata_email_confirmed())
   );
 
+-- Administratori sunt stabiliți privat din SQL Editor; site-ul nu poate adăuga administratori.
+create table if not exists public.mata_admin_allowlist (
+  email text primary key check (email = lower(btrim(email))),
+  added_at timestamptz not null default now()
+);
+alter table public.mata_admin_allowlist enable row level security;
+revoke all on public.mata_admin_allowlist from public, anon, authenticated;
+
+create or replace function public.mata_is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1
+    from public.mata_admin_allowlist a
+    join auth.users u on lower(u.email) = a.email
+    where u.id = (select auth.uid())
+      and u.email_confirmed_at is not null
+  );
+$$;
+revoke all on function public.mata_is_admin() from public, anon;
+grant execute on function public.mata_is_admin() to authenticated;
+
+drop policy if exists "Owners update their ads" on public.ads;
+drop policy if exists "Owners and admins update ads" on public.ads;
+create policy "Owners and admins update ads" on public.ads
+  for update to authenticated
+  using (
+    (owner_id = (select auth.uid()) and (select public.mata_email_confirmed()))
+    or (select public.mata_is_admin())
+  )
+  with check (
+    (owner_id = (select auth.uid()) and (select public.mata_email_confirmed()))
+    or (select public.mata_is_admin())
+  );
+
+drop policy if exists "Owners delete their ads" on public.ads;
+drop policy if exists "Owners and admins delete ads" on public.ads;
+create policy "Owners and admins delete ads" on public.ads
+  for delete to authenticated using (
+    (owner_id = (select auth.uid()) and (select public.mata_email_confirmed()))
+    or (select public.mata_is_admin())
+  );
+
+drop policy if exists "Users delete photos from their own folder" on storage.objects;
+drop policy if exists "Owners and admins delete ad photos" on storage.objects;
+create policy "Owners and admins delete ad photos" on storage.objects
+  for delete to authenticated using (
+    bucket_id = 'mata-ad-photos'
+    and (
+      ((storage.foldername(name))[1] = (select auth.uid())::text and (select public.mata_email_confirmed()))
+      or (select public.mata_is_admin())
+    )
+  );
+
 -- Activează evenimente realtime pentru lista de anunțuri, conversații și mesaje.
 do $$
 begin
